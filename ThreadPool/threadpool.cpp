@@ -1,6 +1,6 @@
 ﻿#include "threadpool.h"
 #include <iostream>
-const int TASK_QUEMAX_THRESHHOLD = 1024;
+const int TASK_QUEMAX_THRESHHOLD = 4;
 
 ThreadPool::ThreadPool()
 	: initThreadSize_(4),
@@ -46,7 +46,9 @@ void ThreadPool::submitTask(std::shared_ptr<Task> task)
 	}*/
 	if (!notFull_.wait_for(lock, std::chrono::seconds(1), [&]()-> bool { return taskSize_ < taskQueMaxThreshhold_; }))
 	{
+		//notFull_等待1s，条件依然不满足
 		std::cerr << "task queue is full, submit task fail" << std::endl;
+		return;
 	}
 	//如果有空余，把任务加入到任务队列中
 	taskQue_.emplace(task);
@@ -55,10 +57,33 @@ void ThreadPool::submitTask(std::shared_ptr<Task> task)
 	notEmpty_.notify_all();
 }
 
+//线程池的所有线程从任务队列中取出任务进行消费
 void ThreadPool::threadFunc()
 {
-	std::cout << "begin threadFunc" << std::this_thread::get_id() << std::endl;
-	std::cout << "end threadFunc" << std::this_thread::get_id() << std::endl;
+	while (1)
+	{
+		std::shared_ptr<Task> task;
+		{
+			//先获取锁
+			std::unique_lock<std::mutex> lock(taskQueMtx_);
+			//等待notEmpty_条件
+			std::cout << "tid: " << std::this_thread::get_id() << "尝试获取任务" << std::endl;
+			notEmpty_.wait(lock, [&]()->bool {  return taskSize_ > 0; });
+			std::cout << "tid: " << std::this_thread::get_id() << "获取任务成功" << std::endl;
+			//从任务队列中取出任务
+			task = taskQue_.front();
+			taskQue_.pop();
+			taskSize_--;
+			if (taskQue_.size() > 0)
+				notEmpty_.notify_all();
+			//取出任务，进行通知
+			notFull_.notify_all();
+		}//出作用域自己释放锁，执行任务的时候不需要持有锁
+		//当前线程负责执行这个任务
+		if(task != nullptr)
+			task->run();
+		
+	}
 }
 
 

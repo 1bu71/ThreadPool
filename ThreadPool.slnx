@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="ThreadPool/ThreadPool.vcxproj" />
+  <Project Path="ThreadPool/ThreadPool.vcxproj" Id="84333be8-1e53-4f30-8607-b7132af6dcbc" />
 </Solution>

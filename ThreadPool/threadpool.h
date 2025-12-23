@@ -16,6 +16,8 @@ class Any
 public:
 	Any() = default;
 	~Any() = default;
+	Any(Any&& any) = default;
+	Any& operator=(Any&& any) = default;
 	template<typename T>
 	Any(T data) :base_(std::make_unique<Derive<T>>(data)) {}
 
@@ -32,6 +34,7 @@ public:
 private: 
 	class Base
 	{
+	public:
 		virtual ~Base() = default;
 	};
 	template<typename T>
@@ -68,7 +71,24 @@ private:
 	int resLimit_;
 	std::mutex mtx_;
 	std::condition_variable cv_;
+};
 
+class Task;
+class Result
+{
+public:
+	Result(std::shared_ptr<Task> task, bool isValid = true);
+	~Result() = default;
+
+	//setValue方法，获取任务执行的返回值
+	void setValue(Any any);
+	//get方法，用户调用这个给方法获取任务执行的返回值
+	Any get();
+private:
+	std::shared_ptr<Task> task_;//指向对应获取返回值的任务对象
+	Any any_; //存储任务的返回值
+	Semphore sem_;
+	std::atomic_bool isValid_;//表示返回值是否有效，如果任务提交失败，则不必阻塞线程
 };
 //线程池支持两种模式，杜绝枚举类型不同但是枚举项相同冲突的情况
 enum class PoolMode {
@@ -80,7 +100,13 @@ enum class PoolMode {
 class Task
 {
 public:
-	virtual void run() = 0;
+	Task();
+	~Task() = default;
+	virtual Any run() = 0;
+	void exec();
+	void setResult(Result* result);
+private:
+	Result* result_; //Result对象的生命周期长于Task对象
 };
 
 class Thread
@@ -120,7 +146,7 @@ public:
 
 	void setTaskQueMaxThreshhold(int threshhold);
 	void start(int initthreadsize);
-	void submitTask(std::shared_ptr<Task> task);
+	Result submitTask(std::shared_ptr<Task> task);
 
 	ThreadPool(const ThreadPool&) = delete;
 	ThreadPool& operator=(const ThreadPool&) = delete;

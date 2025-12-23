@@ -33,6 +33,7 @@ private:
 int main()
 {
     ThreadPool pool;
+	pool.setMode(PoolMode::MODE_CACHED);
 	pool.start(4);
 	auto start = std::chrono::high_resolution_clock::now();
 	// 随着task被执行完，task对象没了，依赖于task对象的Result对象也没了。所以获取Result不能用task->getResult()的设计方式

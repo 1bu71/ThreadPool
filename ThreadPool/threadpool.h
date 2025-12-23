@@ -8,6 +8,8 @@
 #include<memory>
 #include<atomic>
 #include<functional>
+#include<chrono>
+#include<unordered_map>
 
 //Any类型，可以接受任意类型的数据
 
@@ -113,12 +115,15 @@ class Thread
 {
 public:
 	//线程函数对象类型
-	using ThreadFunc = std::function<void()>;
+	using ThreadFunc = std::function<void(int)>;
 	Thread(ThreadFunc func);
 	~Thread();
 	void start();
+	int getId() const;
 private:
 	ThreadFunc func_;
+	static int generateId_;
+	int threadId_;
 };
 /*
 example:
@@ -145,6 +150,9 @@ public:
 	void setMode(PoolMode mode);
 
 	void setTaskQueMaxThreshhold(int threshhold);
+
+	//设置线程池cached模式下的线程上限阈值
+	void setTheadSizeMaxThreshhold(int threshhold);
 	void start(int initthreadsize);
 	Result submitTask(std::shared_ptr<Task> task);
 
@@ -152,11 +160,18 @@ public:
 	ThreadPool& operator=(const ThreadPool&) = delete;
 private:
 	//线程函数
-	void threadFunc();
+	void threadFunc(int threadid);
+	//检查pool的运行状态
+	bool checkRunningState() const;
 
-
-	std::vector<std::unique_ptr<Thread>> threads_;//线程列表
+	//std::vector<std::unique_ptr<Thread>> threads_;//线程列表
+	std::unordered_map<int, std::unique_ptr<Thread>> threads_;
 	size_t initThreadSize_;//初始线程数量
+	std::atomic_int idleThreadSize_;//空闲线程数量
+	size_t threadSizeThreshHold_;//线程数量上限
+	std::atomic_int curThreadSize_;//记录当前线程池里面线程的总数量
+
+
 	//如果用户创建了一个临时的任务对象，并将其加入线程池，线程池销毁时需要释放该任务对象
 	std::queue<std::shared_ptr<Task>> taskQue_;
 	std::atomic_uint taskSize_;//任务数量
@@ -168,6 +183,7 @@ private:
 	std::condition_variable notEmpty_;//表示任务队列不空
 
 	PoolMode poolMode_;
+	std::atomic_bool isPoolRunnig_; //表示当前线程池的启动状态
 };
 
 #endif

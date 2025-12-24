@@ -1,8 +1,8 @@
 ﻿#include "threadpool.h"
 #include <iostream>
-const int TASK_QUEMAX_THRESHHOLD = 4;
-const int THREAD_MAX_THRESHHOLD = 10;
-const int THREAD_IDLE_TIME = 60; //单位秒
+const int TASK_QUEMAX_THRESHHOLD = INT32_MAX;
+const int THREAD_MAX_THRESHHOLD = 1024;
+const int THREAD_IDLE_TIME = 10; //单位秒
 ThreadPool::ThreadPool()
 	: initThreadSize_(4),
 	taskSize_(0),
@@ -82,9 +82,13 @@ Result ThreadPool::submitTask(std::shared_ptr<Task> sp)
 		&& curThreadSize_ < threadSizeThreshHold_)
 	{
 		//创建新线程
+		std::cout << "create new thread" << std::this_thread::get_id() <<std::endl;
 		auto ptr = make_unique<Thread>(std::bind(&ThreadPool::threadFunc, this, std::placeholders::_1));
 		int threadId = ptr->getId();
 		threads_.emplace(threadId, std::move(ptr));
+		threads_[threadId]->start();
+		curThreadSize_++;
+		idleThreadSize_++;
 	}
 
 	//返回任务Result对象
@@ -109,7 +113,7 @@ void ThreadPool::threadFunc(int threadid)
 			if (poolMode_ == PoolMode::MODE_CACHED)
 			{
 				//每一秒要返回一次， 区分超时返回还是有任务执行返回
-				while (taskQue_.size() > 0)
+				while (taskQue_.size() == 0)
 				{
 					if (std::cv_status::timeout == notEmpty_.wait_for(lock, std::chrono::seconds(1)))
 					{
@@ -120,7 +124,11 @@ void ThreadPool::threadFunc(int threadid)
 						{
 							//todo 回收线程
 							//记录线程数量的相关变量的值进行修改，把线程对象从线程池列表容器中删除
-							//threadFunc <=> thread对象  
+							//threadFunc <=> thread对象 
+							threads_.erase(threadid);
+							std::cout << "tid: " << std::this_thread::get_id() << "线程退出" << std::endl;
+							curThreadSize_--;
+							idleThreadSize_--;
 						}
 					}
 				}

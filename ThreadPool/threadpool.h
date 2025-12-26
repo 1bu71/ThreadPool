@@ -181,6 +181,7 @@ private:
 	//定义两个条件变量，分别是不空和不满
 	std::condition_variable notFull_;//表示任务队列不满
 	std::condition_variable notEmpty_;//表示任务队列不空
+	std::condition_variable exitCond_;//表示线程池退出时，等待所有线程退出的条件变量
 
 	PoolMode poolMode_;
 	std::atomic_bool isPoolRunnig_; //表示当前线程池的启动状态

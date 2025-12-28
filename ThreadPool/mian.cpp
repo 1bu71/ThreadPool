@@ -17,7 +17,7 @@ class MyTask :public Task
 	Any run() override
 	{
 		std::cout << "tid: " << std::this_thread::get_id() << "begin" << std::endl;
-		std::this_thread::sleep_for(std::chrono::seconds(5));
+		std::this_thread::sleep_for(std::chrono::seconds(3));
 		uLong sum = 0;
 		for (uLong i = begin_; i <= end_; ++i)
 		{
@@ -32,6 +32,7 @@ private:
 };
 int main()
 {
+#if 0
     ThreadPool pool;
 	pool.setMode(PoolMode::MODE_CACHED);
 	pool.start(4);
@@ -58,7 +59,15 @@ int main()
 	//pool.submitTask(std::make_shared<MyTask>());
 	//pool.submitTask(std::make_shared<MyTask>());
 	//pool.submitTask(std::make_shared<MyTask>());
-
+#endif
+	{
+		ThreadPool pool;
+		pool.start(4);
+		Result res1 = pool.submitTask(std::make_shared<MyTask>(1, 100000000));
+		uLong sum1 = res1.get().cast_<uLong>();
+		std::cout << sum1 << std::endl;	
+	}
 	getchar();
+	std::cout << "main over" << std::endl;
 	return 0;
 }

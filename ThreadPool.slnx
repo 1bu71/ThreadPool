@@ -4,4 +4,5 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="ThreadPool/ThreadPool.vcxproj" Id="84333be8-1e53-4f30-8607-b7132af6dcbc" />
+  <Project Path="ThreadPool_last/ThreadPool_last.vcxproj" Id="44dd4c78-2a7c-44cc-8cda-1e9da5002905" />
 </Solution>
